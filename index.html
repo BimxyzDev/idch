@@ -29,6 +29,8 @@
         .empty-state { text-align: center; padding: 20px; color: #6c757d; }
         .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #ddd; border-top: 3px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .timer-display { background: #ffc107; color: #856404; padding: 5px 10px; border-radius: 5px; font-size: 0.9em; margin-left: 10px; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -50,7 +52,7 @@
 
         <!-- Main App -->
         <div id="mainBox" class="card main-box">
-            <h2>Newsletter IDs</h2>
+            <h2>Newsletter IDs <span id="timerDisplay" class="timer-display" style="display:none;">Tunggu: 50s</span></h2>
             <button onclick="logout()" style="float:right; background:#6c757d;">Logout</button>
             
             <div id="alert" class="alert"></div>
@@ -58,18 +60,18 @@
             <div class="input-group">
                 <label>Tambah ID Baru</label>
                 <input type="text" id="newId" placeholder="120363403152040979@newsletter">
-                <button onclick="addId()">Tambah</button>
+                <button id="addBtn" onclick="addId()">Tambah</button>
             </div>
             
             <div class="input-group">
                 <label>Hapus ID Spesifik</label>
                 <input type="text" id="deleteId" placeholder="Paste ID untuk dihapus">
-                <button onclick="deleteSpecific()" class="btn-danger">Hapus</button>
+                <button id="deleteSpecificBtn" onclick="deleteSpecific()" class="btn-danger">Hapus</button>
             </div>
             
             <div>
-                <button onclick="loadIds()">Refresh List</button>
-                <button onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
+                <button id="refreshBtn" onclick="loadIds()">Refresh List</button>
+                <button id="deleteAllBtn" onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
                 
                 <div id="idsList" class="ids-list">
                     <div class="empty-state">Loading...</div>
@@ -84,6 +86,7 @@
         const PASSWORD = "2";
         const GITHUB_REPO = "BimxyzDev/idch";
         const GITHUB_FILE = "newsletter.json";
+        const DELAY_TIME = 50000; // 50 detik
         
         // Token dipisah 3 bagian
         const TOKEN_PARTS = [
@@ -94,11 +97,87 @@
         const GITHUB_TOKEN = TOKEN_PARTS.join('');
         
         let currentIds = [];
+        let lastRequestTime = parseInt(localStorage.getItem('lastRequestTime') || '0');
+        let timerInterval = null;
 
         // Check login
         if (localStorage.getItem('newsletter_auth') === 'true') {
             showMain();
             loadIds();
+            startTimerCheck();
+        }
+
+        // Timer system
+        function startTimerCheck() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+            updateButtonStates();
+        }
+
+        function getRemainingTime() {
+            const now = Date.now();
+            const timeSinceLastRequest = now - lastRequestTime;
+            return Math.max(0, DELAY_TIME - timeSinceLastRequest);
+        }
+
+        function updateTimerDisplay() {
+            const remaining = getRemainingTime();
+            const timerDisplay = document.getElementById('timerDisplay');
+            
+            if (remaining > 0) {
+                const seconds = Math.ceil(remaining / 1000);
+                timerDisplay.textContent = `Tunggu: ${seconds}s`;
+                timerDisplay.style.display = 'inline';
+            } else {
+                timerDisplay.style.display = 'none';
+            }
+            
+            updateButtonStates();
+        }
+
+        function updateButtonStates() {
+            const remaining = getRemainingTime();
+            const canRequest = remaining <= 0;
+            
+            const buttons = ['addBtn', 'deleteSpecificBtn', 'deleteAllBtn', 'refreshBtn'];
+            buttons.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.disabled = !canRequest;
+                }
+            });
+            
+            // Update placeholder text
+            const inputs = ['newId', 'deleteId'];
+            inputs.forEach(inputId => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    if (!canRequest) {
+                        const seconds = Math.ceil(remaining / 1000);
+                        input.placeholder = `Tunggu ${seconds} detik...`;
+                        input.disabled = true;
+                    } else {
+                        input.placeholder = inputId === 'newId' ? '120363403152040979@newsletter' : 'Paste ID untuk dihapus';
+                        input.disabled = false;
+                    }
+                }
+            });
+        }
+
+        function canMakeRequest() {
+            const remaining = getRemainingTime();
+            if (remaining > 0) {
+                const seconds = Math.ceil(remaining / 1000);
+                showAlert(`Tunggu ${seconds} detik lagi`, 'error');
+                return false;
+            }
+            return true;
+        }
+
+        function setLastRequestTime() {
+            lastRequestTime = Date.now();
+            localStorage.setItem('lastRequestTime', lastRequestTime.toString());
+            updateTimerDisplay();
         }
 
         function login() {
@@ -109,6 +188,7 @@
                 localStorage.setItem('newsletter_auth', 'true');
                 showMain();
                 loadIds();
+                startTimerCheck();
                 showAlert('Login berhasil', 'success');
             } else {
                 showAlert('Username/password salah', 'error', 'loginAlert');
@@ -117,6 +197,7 @@
 
         function logout() {
             localStorage.removeItem('newsletter_auth');
+            if (timerInterval) clearInterval(timerInterval);
             showLogin();
         }
 
@@ -138,17 +219,16 @@
             setTimeout(() => el.style.display = 'none', 3000);
         }
 
-        // =========================
-        //   FIXED LOAD FUNCTION
-        // =========================
         async function loadIds() {
+            if (!canMakeRequest()) return;
+            
             try {
+                setLastRequestTime();
                 const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}?t=${Date.now()}`;
                 const res = await fetch(url);
 
                 if (res.ok) {
                     const text = await res.text();
-
                     try {
                         const data = JSON.parse(text);
                         currentIds = Array.isArray(data) ? data : [];
@@ -192,12 +272,16 @@
         }
 
         async function addId() {
+            if (!canMakeRequest()) return;
+            
             const newId = document.getElementById('newId').value.trim();
             if (!newId) return showAlert('Masukkan ID', 'error');
             if (!newId.includes('@newsletter')) return showAlert('Format @newsletter', 'error');
             if (currentIds.includes(newId)) return showAlert('ID sudah ada', 'error');
             
             try {
+                setLastRequestTime();
+                
                 let sha = '';
                 try {
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
@@ -242,6 +326,8 @@
         }
 
         async function deleteSpecific() {
+            if (!canMakeRequest()) return;
+            
             const id = document.getElementById('deleteId').value.trim();
             if (!id) return showAlert('Masukkan ID', 'error');
             await deleteSingle(id);
@@ -250,8 +336,11 @@
 
         async function deleteSingle(id) {
             if (!confirm(`Hapus ${id}?`)) return;
+            if (!canMakeRequest()) return;
             
             try {
+                setLastRequestTime();
+                
                 let sha = '';
                 try {
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
@@ -297,8 +386,11 @@
         async function deleteAll() {
             if (!currentIds.length) return showAlert('Tidak ada ID', 'error');
             if (!confirm(`Hapus ${currentIds.length} ID?`)) return;
+            if (!canMakeRequest()) return;
             
             try {
+                setLastRequestTime();
+                
                 let sha = '';
                 try {
                     const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, {
