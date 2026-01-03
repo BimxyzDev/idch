@@ -1,5 +1,4 @@
 // Configuration
-
 const CONFIG = {
     USERNAME: "1",
     PASSWORD: "2",
@@ -16,8 +15,9 @@ const CONFIG = {
     ]
 };
 
-// Lalu di bagian penggunaan token, pakai:
+// Gabungkan token parts jadi satu
 const GITHUB_TOKEN = CONFIG.TOKEN_PARTS.join('');
+
 // State
 let currentIds = [];
 let isLoading = false;
@@ -429,7 +429,7 @@ async function getFileSHA() {
         const getUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
         const response = await fetch(getUrl, {
             headers: {
-                'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
+                'Authorization': `token ${GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3+json'
             }
         });
@@ -477,7 +477,7 @@ async function updateGitHubFile(idsArray, sha, commitMessage) {
         const response = await fetch(updateUrl, {
             method: 'PUT',
             headers: {
-                'Authorization': `token ${CONFIG.GITHUB_TOKEN}`,
+                'Authorization': `token ${GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3+json',
                 'Content-Type': 'application/json'
             },
