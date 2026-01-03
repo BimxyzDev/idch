@@ -7,7 +7,7 @@ const CONFIG = {
         FILE: "newsletter.json",
         BRANCH: "main"
     },
-    // GitHub Token - Dipisah jadi array lalu join
+    // GitHub Token - Dipisah jadi 3 bagian
     TOKEN_PARTS: [
         "github",  // Bagian 1
         "_pat_",   // Bagian 2
@@ -17,6 +17,10 @@ const CONFIG = {
 
 // Gabungkan token parts jadi satu
 const GITHUB_TOKEN = CONFIG.TOKEN_PARTS.join('');
+
+// Debug: Cek token
+console.log('GitHub Token length:', GITHUB_TOKEN.length);
+console.log('Token starts with:', GITHUB_TOKEN.substring(0, 10) + '...');
 
 // State
 let currentIds = [];
@@ -40,6 +44,8 @@ const loginAlert = document.getElementById('loginAlert');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing Newsletter Manager...');
+    
     if (localStorage.getItem('newsletter_auth') === 'true') {
         showApp();
         loadIds();
@@ -140,7 +146,10 @@ function showLoginAlert(message) {
 
 // Load IDs from GitHub (READ ONLY)
 async function loadIds() {
-    if (isLoading) return;
+    if (isLoading) {
+        console.log('Already loading, skipping...');
+        return;
+    }
     
     try {
         isLoading = true;
@@ -148,34 +157,47 @@ async function loadIds() {
         refreshBtn.disabled = true;
         
         const url = `https://raw.githubusercontent.com/${CONFIG.GITHUB.REPO}/${CONFIG.GITHUB.BRANCH}/${CONFIG.GITHUB.FILE}?t=${Date.now()}`;
-        console.log('Loading from:', url);
+        console.log('Loading from URL:', url);
         
         const response = await fetch(url);
+        console.log('Response status:', response.status, response.ok);
         
         if (!response.ok) {
             if (response.status === 404) {
-                // File doesn't exist yet, create empty array
+                console.log('File not found (404), creating empty array');
                 currentIds = [];
                 renderIdsList();
                 showAlert('No data found, starting fresh', 'error');
+                // Try to create file if it doesn't exist
+                await createInitialFileIfNotExists();
                 return;
             }
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
-        console.log('Loaded data:', data);
+        const text = await response.text();
+        console.log('Raw response text:', text.substring(0, 100) + '...');
         
-        // Validate data is an array
-        if (Array.isArray(data)) {
-            currentIds = data;
-        } else {
-            console.error('Invalid data format, expected array:', data);
+        try {
+            const data = JSON.parse(text);
+            console.log('Parsed JSON data:', data);
+            
+            // Validate data is an array
+            if (Array.isArray(data)) {
+                currentIds = data;
+                console.log('Loaded', currentIds.length, 'IDs');
+            } else {
+                console.error('Invalid data format, expected array but got:', typeof data);
+                currentIds = [];
+            }
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.log('Raw content that failed to parse:', text);
             currentIds = [];
         }
         
         renderIdsList();
-        showAlert('Data loaded successfully', 'success');
+        showAlert(`Loaded ${currentIds.length} IDs`, 'success');
         
     } catch (error) {
         console.error('Error loading IDs:', error);
@@ -189,8 +211,59 @@ async function loadIds() {
     }
 }
 
+// Create initial file if it doesn't exist
+async function createInitialFileIfNotExists() {
+    try {
+        console.log('Attempting to create initial file...');
+        
+        // Check if file exists via API
+        const apiUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
+        const checkRes = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (checkRes.status === 404) {
+            // File doesn't exist, create it
+            console.log('File does not exist, creating...');
+            
+            const content = JSON.stringify([], null, 2);
+            const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+            
+            const createRes = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Initial newsletter.json',
+                    content: contentBase64,
+                    branch: CONFIG.GITHUB.BRANCH
+                })
+            });
+            
+            if (createRes.ok) {
+                console.log('File created successfully');
+                showAlert('Created new file on GitHub', 'success');
+            } else {
+                const error = await createRes.json();
+                console.error('Failed to create file:', error);
+            }
+        } else if (checkRes.ok) {
+            console.log('File exists via API but not via raw URL');
+        }
+    } catch (error) {
+        console.error('Error creating file:', error);
+    }
+}
+
 // Render IDs list
 function renderIdsList() {
+    console.log('Rendering', currentIds.length, 'IDs');
     idsCount.textContent = `${currentIds.length} ID${currentIds.length !== 1 ? 's' : ''}`;
     
     if (currentIds.length === 0) {
@@ -231,7 +304,10 @@ function renderIdsList() {
 
 // Add new ID
 async function handleAddId() {
-    if (isLoading) return;
+    if (isLoading) {
+        console.log('Busy, cannot add now');
+        return;
+    }
     
     const newId = newIdInput.value.trim();
     
@@ -257,22 +333,28 @@ async function handleAddId() {
         addBtn.innerHTML = '<div class="loading"></div> Adding...';
         addBtn.disabled = true;
         
-        // Load current data from GitHub first
-        await loadIds();
+        console.log('Adding ID:', newId);
         
-        // Check again after loading (in case someone else added it)
+        // Reload data first to get latest
+        await loadIdsForUpdate();
+        
+        // Check again after loading
         if (currentIds.includes(newId)) {
             showAlert('This ID already exists', 'error');
             return;
         }
         
         // First get current file SHA
+        console.log('Getting file SHA...');
         const sha = await getFileSHA();
+        console.log('Got SHA:', sha ? sha.substring(0, 20) + '...' : 'No SHA (new file)');
         
         // Add new ID to current list
         const updatedIds = [...currentIds, newId];
+        console.log('Updated IDs count:', updatedIds.length);
         
         // Update on GitHub
+        console.log('Updating GitHub...');
         await updateGitHubFile(updatedIds, sha, `Add ID: ${newId}`);
         
         // Update local state
@@ -294,9 +376,30 @@ async function handleAddId() {
     }
 }
 
+// Load IDs for update (without UI changes)
+async function loadIdsForUpdate() {
+    try {
+        const url = `https://raw.githubusercontent.com/${CONFIG.GITHUB.REPO}/${CONFIG.GITHUB.BRANCH}/${CONFIG.GITHUB.FILE}?t=${Date.now()}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                currentIds = data;
+                console.log('Reloaded for update:', currentIds.length, 'IDs');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading for update:', error);
+    }
+}
+
 // Delete specific ID by input
 async function handleDeleteSpecific() {
-    if (isLoading) return;
+    if (isLoading) {
+        console.log('Busy, cannot delete now');
+        return;
+    }
     
     const idToDelete = deleteIdInput.value.trim();
     
@@ -320,7 +423,18 @@ async function handleDeleteSpecific() {
         deleteSpecificBtn.innerHTML = '<div class="loading"></div> Deleting...';
         deleteSpecificBtn.disabled = true;
         
-        // First get current file SHA
+        console.log('Deleting ID:', idToDelete);
+        
+        // Reload data first
+        await loadIdsForUpdate();
+        
+        // Check again
+        if (!currentIds.includes(idToDelete)) {
+            showAlert('ID not found', 'error');
+            return;
+        }
+        
+        // Get current file SHA
         const sha = await getFileSHA();
         
         // Remove ID from list
@@ -347,7 +461,7 @@ async function handleDeleteSpecific() {
     }
 }
 
-// Delete single ID
+// Delete single ID (from button)
 async function deleteSingleId(id) {
     if (isLoading) return;
     
@@ -358,7 +472,18 @@ async function deleteSingleId(id) {
     try {
         isLoading = true;
         
-        // First get current file SHA
+        console.log('Deleting single ID:', id);
+        
+        // Reload data first
+        await loadIdsForUpdate();
+        
+        // Check if ID still exists
+        if (!currentIds.includes(id)) {
+            showAlert('ID already deleted', 'error');
+            return;
+        }
+        
+        // Get current file SHA
         const sha = await getFileSHA();
         
         // Remove ID from list
@@ -375,7 +500,7 @@ async function deleteSingleId(id) {
         showAlert('ID deleted successfully', 'success');
         
     } catch (error) {
-        console.error('Error deleting ID:', error);
+        console.error('Error deleting single ID:', error);
         showAlert(`Failed to delete ID: ${error.message}`, 'error');
     } finally {
         isLoading = false;
@@ -400,7 +525,9 @@ async function handleDeleteAll() {
         deleteAllBtn.innerHTML = '<div class="loading"></div> Deleting...';
         deleteAllBtn.disabled = true;
         
-        // First get current file SHA
+        console.log('Deleting all IDs');
+        
+        // Get current file SHA
         const sha = await getFileSHA();
         
         // Update on GitHub with empty array
@@ -427,6 +554,8 @@ async function handleDeleteAll() {
 async function getFileSHA() {
     try {
         const getUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
+        console.log('Getting SHA from:', getUrl);
+        
         const response = await fetch(getUrl, {
             headers: {
                 'Authorization': `token ${GITHUB_TOKEN}`,
@@ -434,18 +563,24 @@ async function getFileSHA() {
             }
         });
         
+        console.log('SHA response status:', response.status);
+        
         if (response.ok) {
             const fileData = await response.json();
-            return fileData.sha;
+            const sha = fileData.sha;
+            console.log('Got SHA:', sha.substring(0, 20) + '...');
+            return sha;
         } else if (response.status === 404) {
             // File doesn't exist yet, return empty string
+            console.log('File not found (404), no SHA');
             return '';
         } else {
             const errorData = await response.json().catch(() => ({}));
+            console.error('Error getting SHA:', errorData);
             throw new Error(errorData.message || `HTTP ${response.status}`);
         }
     } catch (error) {
-        console.error('Error getting file SHA:', error);
+        console.error('Error in getFileSHA:', error);
         throw error;
     }
 }
@@ -454,9 +589,11 @@ async function getFileSHA() {
 async function updateGitHubFile(idsArray, sha, commitMessage) {
     try {
         const updateUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
+        console.log('Updating file at:', updateUrl);
         
         // Ensure we have a valid array
         const content = JSON.stringify(idsArray, null, 2);
+        console.log('Content to save:', content);
         
         // Convert to Base64 properly
         const contentBase64 = btoa(unescape(encodeURIComponent(content)));
@@ -467,12 +604,15 @@ async function updateGitHubFile(idsArray, sha, commitMessage) {
             branch: CONFIG.GITHUB.BRANCH
         };
         
-        // Only add SHA if file exists
+         // Only add SHA if file exists
         if (sha) {
             data.sha = sha;
+            console.log('Using SHA:', sha.substring(0, 20) + '...');
+        } else {
+            console.log('No SHA (creating new file)');
         }
         
-        console.log('Updating GitHub with:', { commitMessage, idsCount: idsArray.length });
+        console.log('Sending data to GitHub...');
         
         const response = await fetch(updateUrl, {
             method: 'PUT',
@@ -484,9 +624,11 @@ async function updateGitHubFile(idsArray, sha, commitMessage) {
             body: JSON.stringify(data)
         });
         
+        console.log('Update response status:', response.status);
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('GitHub API Error:', errorData);
+            console.error('GitHub API Error response:', errorData);
             
             let errorMessage = errorData.message || `HTTP ${response.status}`;
             
@@ -497,19 +639,26 @@ async function updateGitHubFile(idsArray, sha, commitMessage) {
                 errorMessage = 'Invalid GitHub token. Please check your token.';
             } else if (errorMessage.includes('Reference already exists')) {
                 errorMessage = 'Update conflict. Please refresh and try again.';
+            } else if (errorMessage.includes('Invalid request')) {
+                // Try to parse for more details
+                if (errorData.errors) {
+                    errorMessage += ': ' + errorData.errors.map(e => e.message).join(', ');
+                }
             }
             
             throw new Error(errorMessage);
         }
         
         const result = await response.json();
-        console.log('GitHub update successful:', result.commit.html_url);
+        console.log('GitHub update successful! Commit:', result.commit.html_url);
         
         // Reload data to ensure sync
-        await loadIds();
+        setTimeout(() => loadIds(), 1000);
+        
+        return result;
         
     } catch (error) {
-        console.error('Error updating GitHub file:', error);
+        console.error('Error in updateGitHubFile:', error);
         throw error;
     }
 }
@@ -535,3 +684,6 @@ setInterval(() => {
         loadIds();
     }
 }, 30000);
+
+// Initial check
+console.log('Newsletter Manager initialized with token length:', GITHUB_TOKEN.length);
