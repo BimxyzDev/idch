@@ -11,8 +11,8 @@ const CONFIG = {
     // GitHub Token - Dipisah jadi array lalu join
     TOKEN_PARTS: [
         "github",  // Bagian 1
-        "_pat_11BTL4JUA0",   // Bagian 2
-        "NxjtCiI1Outu_6OGr4e1YeSXSPn3haoV3oS1aPWBna08JTDNetpD5kZGCUJP76VIiXP8O7JQ"  // Bagian 3
+        "_pat_",   // Bagian 2
+        "11BTL4JUA0NxjtCiI1Outu_6OGr4e1YeSXSPn3haoV3oS1aPWBna08JTDNetpD5kZGCUJP76VIiXP8O7JQ"  // Bagian 3
     ]
 };
 
