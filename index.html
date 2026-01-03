@@ -1,104 +1,193 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Newsletter Manager</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial; }
-        body { background: #f0f0f0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .login-box { max-width: 400px; margin: 100px auto; }
-        .main-box { display: none; }
-        h2 { margin-bottom: 20px; color: #333; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #555; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin: 5px; }
-        button:hover { background: #0056b3; }
-        .btn-danger { background: #dc3545; }
-        .btn-danger:hover { background: #c82333; }
-        .alert { padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-error { background: #f8d7da; color: #721c24; }
-        .ids-list { background: #f8f9fa; border-radius: 5px; padding: 15px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
-        .id-item { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
-        .id-item:last-child { border-bottom: none; }
-        .icon-btn { background: none; border: none; cursor: pointer; margin-left: 10px; }
-        .empty-state { text-align: center; padding: 20px; color: #6c757d; }
-        .timer-display { background: #ffc107; color: #856404; padding: 5px 10px; border-radius: 5px; font-size: 0.9em; margin-left: 10px; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div id="loginBox" class="card login-box">
-            <h2>Login</h2>
-            <div class="input-group">
-                <label>Username</label>
-                <input type="text" id="username">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="password">
-            </div>
-            <div id="loginAlert" class="alert"></div>
-            <button onclick="login()">Login</button>
-        </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newsletter Manager</title>
 
-        <div id="mainBox" class="card main-box">
-            <h2>Newsletter IDs <span id="timerDisplay" class="timer-display" style="display:none;">Tunggu: 50s</span></h2>
-            <button onclick="logout()" style="float:right; background:#6c757d;">Logout</button>
-            
-            <div id="alert" class="alert"></div>
-            
-            <div class="input-group">
-                <label>Tambah ID Baru</label>
-                <input type="text" id="newId" placeholder="120363403152040979@newsletter">
-                <button id="addBtn" onclick="addId()">Tambah</button>
-            </div>
-            
-            <div class="input-group">
-                <label>Hapus ID Spesifik</label>
-                <input type="text" id="deleteId" placeholder="Paste ID untuk dihapus">
-                <button id="deleteSpecificBtn" onclick="deleteSpecific()" class="btn-danger">Hapus</button>
-            </div>
-            
-            <div>
-                <button id="refreshBtn" onclick="loadIds()">Refresh List</button>
-                <button id="deleteAllBtn" onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
-                
-                <div id="idsList" class="ids-list">
-                    <div class="empty-state">Loading...</div>
-                </div>
-            </div>
-        </div>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#0f172a;padding:20px;color:#e5e7eb}
+.container{max-width:850px;margin:0 auto}
+.card{
+ background:#020617;
+ border:1px solid #1f2937;
+ border-radius:16px;
+ padding:28px;
+ box-shadow:0 10px 40px rgba(0,0,0,.4);
+ margin-bottom:24px
+}
+h2{margin-bottom:18px;color:#f8fafc}
+.input-group{margin-bottom:15px}
+label{display:block;margin-bottom:6px;color:#cbd5f5;font-size:14px}
+input{
+ width:100%;
+ padding:11px;
+ border:1px solid #334155;
+ border-radius:8px;
+ background:#020617;
+ color:white
+}
+button{
+ background:#2563eb;
+ color:white;
+ border:none;
+ padding:10px 15px;
+ border-radius:8px;
+ cursor:pointer;
+ margin:6px
+}
+button:hover{background:#1e40af}
+.btn-danger{background:#dc2626}
+.btn-danger:hover{background:#991b1b}
+
+.alert{
+ padding:12px;border-radius:10px;
+ margin-bottom:15px;
+ display:none;
+ font-size:14px
+}
+.alert-success{background:#065f46;color:#ecfdf5}
+.alert-error{background:#7f1d1d;color:#fee2e2}
+
+.info-box{
+ background:#0f172a;
+ border:1px solid #1f2937;
+ border-radius:12px;
+ padding:10px;
+ font-size:13px;
+ color:#cbd5f5;
+ margin-bottom:10px
+}
+
+.ids-list{
+ background:#020617;
+ border-radius:10px;
+ padding:15px;
+ margin-top:15px;
+ max-height:300px;
+ overflow-y:auto;
+ border:1px solid #1f2937
+}
+.id-item{
+ padding:10px;
+ border-bottom:1px solid #1f2937;
+ display:flex;
+ justify-content:space-between;
+ align-items:center
+}
+.id-item:last-child{border-bottom:none}
+
+.empty-state{text-align:center;padding:25px;color:#64748b}
+.timer-display{
+ background:#713f12;
+ color:#fde68a;
+ padding:5px 10px;
+ border-radius:8px;
+ font-size:12px;
+ margin-left:10px
+}
+button:disabled{opacity:.4;cursor:not-allowed}
+
+.topbar{
+ display:flex;
+ justify-content:space-between;
+ align-items:center
+}
+.notice{
+ background:#1e3a8a;
+ color:#bfdbfe;
+ padding:10px;
+ border-radius:10px;
+ margin-top:8px;
+ font-size:13px
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- LOGIN -->
+<div id="loginBox" class="card login-box">
+    <h2>Login</h2>
+    <div class="input-group">
+        <label>Username</label>
+        <input type="text" id="username">
+    </div>
+    <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password">
+    </div>
+    <div id="loginAlert" class="alert"></div>
+    <button onclick="login()">Login</button>
+</div>
+
+<!-- MAIN -->
+<div id="mainBox" class="card main-box" style="display:none">
+
+    <div class="topbar">
+        <h2>Newsletter IDs 
+            <span id="timerDisplay" class="timer-display" style="display:none">
+                Tunggu: 50s
+            </span>
+        </h2>
+
+        <button onclick="logout()" style="background:#334155">Logout</button>
     </div>
 
-<script>
-const USERNAME = "1";
-const PASSWORD = "2";
-const GITHUB_REPO = "BimxyzDev/idch";
-const GITHUB_FILE = "newsletter.json";
-const DELAY_TIME = 50000;
+    <div class="notice">
+        ⚠ Data GitHub RAW bisa delay ±10–60 detik karena cache CDN.  
+        Sistem ini sudah memakai GitHub API agar lebih realtime.
+    </div>
 
-const TOKEN_PARTS = [
+    <div id="alert" class="alert"></div>
+
+    <div class="input-group">
+        <label>Tambah ID Baru</label>
+        <input id="newId" placeholder="120363xxxx@newsletter">
+        <button id="addBtn" onclick="addId()">Tambah</button>
+    </div>
+
+    <div class="input-group">
+        <label>Hapus ID Spesifik</label>
+        <input id="deleteId" placeholder="Paste ID untuk dihapus">
+        <button id="deleteSpecificBtn" onclick="deleteSpecific()" class="btn-danger">Hapus</button>
+    </div>
+
+    <div>
+        <button id="refreshBtn" onclick="loadIds()">Refresh List</button>
+        <button id="deleteAllBtn" onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
+
+        <div id="idsList" class="ids-list">
+            <div class="empty-state">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ================= CONFIG ================== */
+const USERNAME="1";
+const PASSWORD="2";
+const GITHUB_REPO="BimxyzDev/idch";
+const GITHUB_FILE="newsletter.json";
+const DELAY_TIME=50000;
+
+const TOKEN_PARTS=[
  "github",
  "_pat_",
  "11BTL4JUA0NxjtCiI1Outu_6OGr4e1YeSXSPn3haoV3oS1aPWBna08JTDNetpD5kZGCUJP76VIiXP8O7JQ"
 ];
-const GITHUB_TOKEN = TOKEN_PARTS.join('');
+const GITHUB_TOKEN=TOKEN_PARTS.join('');
 
-let currentIds = [];
-let currentSha = "";
-let lastRequestTime = parseInt(localStorage.getItem('lastRequestTime')||'0');
+let currentIds=[];
+let currentSha="";
+let lastRequestTime=parseInt(localStorage.getItem("lastRequestTime")||"0");
 let timerInterval=null;
 
 
-// ================== LOGIN ==================
-
-if(localStorage.getItem('newsletter_auth')==='true'){
+/* ============= LOGIN SYSTEM ============== */
+if(localStorage.getItem("newsletter_auth")==="true"){
  showMain();
  loadIds();
  startTimerCheck();
@@ -106,33 +195,32 @@ if(localStorage.getItem('newsletter_auth')==='true'){
 
 function login(){
  if(username.value===USERNAME && password.value===PASSWORD){
-  localStorage.setItem('newsletter_auth','true');
+  localStorage.setItem("newsletter_auth","true");
   showMain();
   loadIds();
   startTimerCheck();
-  showAlert('Login berhasil','success');
- } else showAlert('Username/password salah','error','loginAlert');
+  showAlert("Login berhasil","success");
+ }else showAlert("Username/password salah","error","loginAlert");
 }
 
 function logout(){
- localStorage.removeItem('newsletter_auth');
+ localStorage.removeItem("newsletter_auth");
  if(timerInterval)clearInterval(timerInterval);
  showLogin();
 }
 
 function showLogin(){
- loginBox.style.display='block';
- mainBox.style.display='none';
+ loginBox.style.display="block";
+ mainBox.style.display="none";
 }
 
 function showMain(){
- loginBox.style.display='none';
- mainBox.style.display='block';
+ loginBox.style.display="none";
+ mainBox.style.display="block";
 }
 
 
-// ================== TIMER ==================
-
+/* ============= TIMER ================= */
 function startTimerCheck(){
  if(timerInterval)clearInterval(timerInterval);
  timerInterval=setInterval(updateTimerDisplay,1000);
@@ -145,23 +233,22 @@ function getRemainingTime(){
 
 function updateTimerDisplay(){
  const r=getRemainingTime();
- const el=document.getElementById('timerDisplay');
+ const el=timerDisplay;
+
  if(r>0){
   el.textContent=`Tunggu: ${Math.ceil(r/1000)}s`;
-  el.style.display='inline';
- } else el.style.display='none';
+  el.style.display="inline";
+ }else el.style.display="none";
 
  const enable=r<=0;
- ['addBtn','deleteSpecificBtn','deleteAllBtn','refreshBtn'].forEach(id=>{
-  const b=document.getElementById(id);
-  if(b) b.disabled=!enable;
- });
+ ["addBtn","deleteSpecificBtn","deleteAllBtn","refreshBtn"]
+ .forEach(id=>{let b=document.getElementById(id);if(b)b.disabled=!enable});
 }
 
 function canMakeRequest(){
  const r=getRemainingTime();
  if(r>0){
-  showAlert(`Tunggu ${Math.ceil(r/1000)} detik lagi`,'error');
+  showAlert(`Tunggu ${Math.ceil(r/1000)} detik lagi`,"error");
   return false;
  }
  return true;
@@ -169,119 +256,102 @@ function canMakeRequest(){
 
 function setLastRequestTime(){
  lastRequestTime=Date.now();
- localStorage.setItem('lastRequestTime',lastRequestTime);
+ localStorage.setItem("lastRequestTime",lastRequestTime);
  updateTimerDisplay();
 }
 
 
-// ================== ALERT ==================
-
-function showAlert(msg,type,id='alert'){
+/* ============= ALERT ================= */
+function showAlert(msg,type,id="alert"){
  const el=document.getElementById(id);
  el.textContent=msg;
  el.className=`alert alert-${type}`;
- el.style.display='block';
- setTimeout(()=>el.style.display='none',3000);
+ el.style.display="block";
+ setTimeout(()=>el.style.display="none",2800);
 }
 
 
-// ================== GITHUB API LOAD ==================
-
+/* ============= LOAD FROM GITHUB API ================= */
 async function loadIds(){
  try{
   const r=await fetch(
    `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
    {headers:{Authorization:`token ${GITHUB_TOKEN}`}}
   );
-
   const j=await r.json();
   currentSha=j.sha;
 
   const decoded=decodeURIComponent(escape(atob(j.content)));
   const arr=JSON.parse(decoded);
 
-  currentIds = Array.isArray(arr)?arr:[];
+  currentIds=Array.isArray(arr)?arr:[];
  }catch(e){
   currentIds=[];
  }
 
  renderIds();
- showAlert(`Loaded ${currentIds.length} IDs`,'success');
+ showAlert(`Loaded ${currentIds.length} IDs`,"success");
 }
 
 
-// ================== RENDER ==================
-
+/* ============= RENDER ================= */
 function renderIds(){
- const list=document.getElementById('idsList');
+ const list=document.getElementById("idsList");
  if(!currentIds.length){
   list.innerHTML='<div class="empty-state">Tidak ada ID</div>';
   return;
  }
 
  list.innerHTML=currentIds.map(id=>`
-  <div class="id-item">
-    <span>${id}</span>
-    <div>
+ <div class="id-item">
+   <span>${id}</span>
+   <div>
      <button class="icon-btn" onclick="copyId('${id}')">📋</button>
-     <button class="icon-btn" onclick="deleteSingle('${id}')">🗑️</button>
-    </div>
-  </div>
- `).join('');
+     <button class="icon-btn" onclick="deleteSingle('${id}')" style="color:#dc2626">🗑️</button>
+   </div>
+ </div>`).join("");
 }
 
 
-// ================== SAVE ==================
-
+/* ============= SAVE ================= */
 async function saveToGithub(arr,msg){
  const c=btoa(unescape(encodeURIComponent(JSON.stringify(arr,null,2))));
 
  await fetch(
   `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
   {
-   method:'PUT',
-   headers:{
-    Authorization:`token ${GITHUB_TOKEN}`,
-    Accept:'application/vnd.github.v3+json'
-   },
-   body:JSON.stringify({
-    message:msg,
-    content:c,
-    sha:currentSha
-   })
-  }
- );
+   method:"PUT",
+   headers:{Authorization:`token ${GITHUB_TOKEN}`},
+   body:JSON.stringify({message:msg,content:c,sha:currentSha})
+  });
 
  await loadIds();
 }
 
 
-// ================== ACTION ==================
+/* ============= ACTIONS ================= */
 
 async function addId(){
  if(!canMakeRequest())return;
-
- const newId=newIdInput.value.trim();
- if(!newId)return showAlert('Masukkan ID','error');
- if(!newId.includes('@newsletter'))return showAlert('Format salah','error');
+ const id=newId.value.trim();
+ if(!id)return showAlert("Masukkan ID","error");
+ if(!id.includes("@newsletter"))return showAlert("Format salah","error");
 
  setLastRequestTime();
-
  await loadIds();
 
- if(currentIds.includes(newId))return showAlert('Sudah ada','error');
+ if(currentIds.includes(id))return showAlert("Sudah ada","error");
 
- await saveToGithub([...currentIds,newId],`Add ID: ${newId}`);
-
- newIdInput.value='';
- showAlert('Berhasil','success');
+ await saveToGithub([...currentIds,id],`Add ID: ${id}`);
+ newId.value="";
+ showAlert("Berhasil","success");
 }
 
 async function deleteSpecific(){
  if(!canMakeRequest())return;
  const id=deleteId.value.trim();
- if(!id)return showAlert('Masukkan ID','error');
- deleteId.value='';
+ if(!id)return showAlert("Masukkan ID","error");
+ deleteId.value="";
  await deleteSingle(id);
 }
 
@@ -290,32 +360,27 @@ async function deleteSingle(id){
  if(!canMakeRequest())return;
 
  setLastRequestTime();
-
  await loadIds();
 
  await saveToGithub(currentIds.filter(x=>x!==id),`Delete ID: ${id}`);
-
- showAlert('Dihapus','success');
+ showAlert("Dihapus","success");
 }
 
 async function deleteAll(){
- if(!currentIds.length)return showAlert('Tidak ada ID','error');
+ if(!currentIds.length)return showAlert("Tidak ada ID","error");
  if(!confirm(`Hapus semua?`))return;
  if(!canMakeRequest())return;
 
  setLastRequestTime();
-
  await saveToGithub([],`Delete all IDs`);
-
- showAlert('Bersih','success');
+ showAlert("Bersih","success");
 }
 
 function copyId(id){
  navigator.clipboard.writeText(id);
- showAlert('Disalin','success');
+ showAlert("ID disalin","success");
 }
-
-const newIdInput=document.getElementById('newId');
 </script>
+
 </body>
-    </html>D
+    </html>
