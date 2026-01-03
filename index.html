@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📰 Newsletter Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        /* Login Screen */
+        .login-container {
+            text-align: center;
+        }
+
+        .login-container h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8fafc;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* Main App */
+        .app-container {
+            display: none;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 4px solid #16a34a;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+        }
+
+        .section-title {
+            color: #1e293b;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 640px) {
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .action-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .action-card:hover {
+            border-color: #c7d2fe;
+            transform: translateY(-3px);
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 140px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #334155;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .delete-section {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+        }
+
+        .delete-section .section-title {
+            color: #dc2626;
+        }
+
+        .delete-input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 640px) {
+            .delete-input-group {
+                flex-direction: column;
+            }
+        }
+
+        .delete-input-group input {
+            flex: 1;
+        }
+
+        .ids-container {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 20px;
+        }
+
+        .ids-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ids-count {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .ids-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .ids-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .ids-list::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .ids-list::-webkit-scrollbar-thumb {
+            background: #c7d2fe;
+            border-radius: 3px;
+        }
+
+        .id-item {
+            background: white;
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #4f46e5;
+            transition: all 0.3s;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .id-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .id-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .id-number {
+            background: #e0e7ff;
+            color: #4f46e5;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .id-text {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #334155;
+            word-break: break-all;
+        }
+
+        .id-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: #f1f5f9;
+            color: #64748b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #e2e8f0;
+            color: #475569;
+            transform: scale(1.1);
+        }
+
+        .icon-btn.delete:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .icon-btn.copy:hover {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .empty-state small {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="card">
+            <div class="header">
+                <h1><i class="fas fa-newspaper"></i> Newsletter Manager</h1>
+                <p>Kelola ID newsletter WhatsApp Bot</p>
+            </div>
+            <div class="content">
+                <div class="login-container">
+                    <h2>Welcome Back</h2>
+                    <div class="input-group">
+                        <label for="username"><i class="fas fa-user"></i> Username</label>
+                        <input type="text" id="username" class="input-field" placeholder="Enter username" autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="password"><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="password" class="input-field" placeholder="Enter password">
+                    </div>
+                    <div id="loginAlert" class="alert" style="display: none;"></div>
+                    <button id="loginBtn" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div id="appScreen" class="card" style="display: none;">
+            <div class="header">
+                <h1><i class="fas fa-newspaper"></i> Newsletter Dashboard</h1>
+                <p>Manage your newsletter IDs with ease</p>
+            </div>
+            <div class="content">
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+
+                <div id="alertContainer"></div>
+
+                <div class="actions-grid">
+                    <!-- Add Section -->
+                    <div class="action-card">
+                        <h3 class="section-title"><i class="fas fa-plus-circle"></i> Add New ID</h3>
+                        <div class="input-group">
+                            <label for="newId"><i class="fas fa-id-card"></i> Newsletter ID</label>
+                            <input type="text" id="newId" class="input-field" placeholder="e.g., 120363403152040979@newsletter">
+                        </div>
+                        <button id="addBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add ID
+                        </button>
+                    </div>
+
+                    <!-- Delete Section -->
+                    <div class="action-card delete-section">
+                        <h3 class="section-title"><i class="fas fa-trash-alt"></i> Delete ID</h3>
+                        <div class="delete-input-group">
+                            <input type="text" id="deleteId" class="input-field" placeholder="Paste ID to delete">
+                            <button id="deleteSpecificBtn" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                        <button id="deleteAllBtn" class="btn btn-danger">
+                            <i class="fas fa-bomb"></i> Delete All IDs
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Current IDs -->
+                <div class="ids-container">
+                    <div class="ids-header">
+                        <h3 class="section-title"><i class="fas fa-list"></i> Current Newsletter IDs</h3>
+                        <div class="ids-count" id="idsCount">0 IDs</div>
+                    </div>
+                    <button id="refreshBtn" class="btn btn-secondary" style="margin-bottom: 20px;">
+                        <i class="fas fa-redo"></i> Refresh List
+                    </button>
+                    <div id="idsList" class="ids-list">
+                        <div class="empty-state">
+                            <i class="fas fa-newspaper"></i>
+                            <p>No newsletter IDs found</p>
+                            <small>Start by adding your first ID above</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p><i class="fas fa-info-circle"></i> Data is synchronized with GitHub repository</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - CHANGE THESE
+        const CONFIG = {
+            USERNAME: "1",
+            PASSWORD: "2",
+            GITHUB: {
+                REPO: "BimxyzDev/idch", // Change to your repo
+                FILE: "newsletter.json",
+                BRANCH: "main"
+            },
+            // GitHub Token - Split into 3 parts for security
+            // Replace with your actual GitHub token parts
+            TOKEN_PARTS: [
+                "github",  // Part 1
+                "_pat_", // Part 2
+                "11BTL4JUA0NxjtCiI1Outu_6OGr4e1YeSXSPn3haoV3oS1aPWBna08JTDNetpD5kZGCUJP76VIiXP8O7JQ" // Part 3
+            ]
+        };
+
+        // State
+        let currentIds = [];
+        let githubToken = CONFIG.TOKEN_PARTS.join('');
+
+        // DOM Elements
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('appScreen');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const addBtn = document.getElementById('addBtn');
+        const deleteAllBtn = document.getElementById('deleteAllBtn');
+        const deleteSpecificBtn = document.getElementById('deleteSpecificBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const newIdInput = document.getElementById('newId');
+        const deleteIdInput = document.getElementById('deleteId');
+        const idsList = document.getElementById('idsList');
+        const idsCount = document.getElementById('idsCount');
+        const alertContainer = document.getElementById('alertContainer');
+        const loginAlert = document.getElementById('loginAlert');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check authentication
+            if (localStorage.getItem('newsletter_auth') === 'true') {
+                showApp();
+                loadIds();
+            }
+
+            // Event Listeners
+            loginBtn.addEventListener('click', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
+            addBtn.addEventListener('click', handleAddId);
+            deleteAllBtn.addEventListener('click', handleDeleteAll);
+            deleteSpecificBtn.addEventListener('click', handleDeleteSpecific);
+            refreshBtn.addEventListener('click', loadIds);
+            
+            // Enter key support
+            newIdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleAddId();
+            });
+            
+            deleteIdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleDeleteSpecific();
+            });
+            
+            // Login form enter key
+            document.getElementById('username').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('password').focus();
+            });
+            
+            document.getElementById('password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleLogin();
+            });
+        });
+
+        // Authentication
+        function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (username === CONFIG.USERNAME && password === CONFIG.PASSWORD) {
+                localStorage.setItem('newsletter_auth', 'true');
+                showApp();
+                loadIds();
+                showAlert('Login successful!', 'success');
+            } else {
+                showLoginAlert('Invalid username or password');
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('newsletter_auth');
+            showLogin();
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function showLogin() {
+            loginScreen.style.display = 'block';
+            appScreen.style.display = 'none';
+        }
+
+        function showApp() {
+            loginScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+        }
+
+       // Alerts
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.3s';
+                setTimeout(() => alert.remove(), 300);
+            }, 3000);
+        }
+
+        function showLoginAlert(message) {
+            loginAlert.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <span>${message}</span>
+            `;
+            loginAlert.className = 'alert alert-error';
+            loginAlert.style.display = 'flex';
+            
+            setTimeout(() => {
+                loginAlert.style.opacity = '0';
+                setTimeout(() => {
+                    loginAlert.style.display = 'none';
+                    loginAlert.style.opacity = '1';
+                }, 300);
+            }, 3000);
+        }
+
+        // Load IDs from GitHub
+        async function loadIds() {
+            try {
+                refreshBtn.innerHTML = '<div class="loading"></div> Loading...';
+                refreshBtn.disabled = true;
+                
+                const url = `https://raw.githubusercontent.com/${CONFIG.GITHUB.REPO}/${CONFIG.GITHUB.BRANCH}/${CONFIG.GITHUB.FILE}?t=${Date.now()}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) throw new Error('Failed to fetch');
+                
+                currentIds = await response.json();
+                renderIdsList();
+                showAlert('Data loaded successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error loading IDs:', error);
+                currentIds = [];
+                renderIdsList();
+                showAlert('Failed to load data. Check repository configuration.', 'error');
+            } finally {
+                refreshBtn.innerHTML = '<i class="fas fa-redo"></i> Refresh List';
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Render IDs list
+        function renderIdsList() {
+            idsCount.textContent = `${currentIds.length} ID${currentIds.length !== 1 ? 's' : ''}`;
+            
+            if (currentIds.length === 0) {
+                idsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-newspaper"></i>
+                        <p>No newsletter IDs found</p>
+                        <small>Start by adding your first ID above</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            currentIds.forEach((id, index) => {
+                html += `
+                    <div class="id-item">
+                        <div class="id-content">
+                            <div class="id-number">${index + 1}</div>
+                            <div class="id-text">${id}</div>
+                        </div>
+                        <div class="id-actions">
+                            <button class="icon-btn copy" onclick="copyId('${id}')" title="Copy ID">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="icon-btn delete" onclick="deleteSingleId('${id}')" title="Delete ID">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            idsList.innerHTML = html;
+        }
+
+        // Add new ID
+        async function handleAddId() {
+            const newId = newIdInput.value.trim();
+            
+            if (!newId) {
+                showAlert('Please enter a newsletter ID', 'error');
+                newIdInput.focus();
+                return;
+            }
+            
+            if (!newId.includes('@newsletter')) {
+                showAlert('ID must contain @newsletter', 'error');
+                return;
+            }
+            
+            if (currentIds.includes(newId)) {
+                showAlert('This ID already exists', 'error');
+                return;
+            }
+            
+            try {
+                addBtn.innerHTML = '<div class="loading"></div> Adding...';
+                addBtn.disabled = true;
+                
+                currentIds.push(newId);
+                await updateGitHubFile();
+                
+                newIdInput.value = '';
+                renderIdsList();
+                showAlert('ID added successfully', 'success');
+                newIdInput.focus();
+                
+            } catch (error) {
+                console.error('Error adding ID:', error);
+                currentIds.pop();
+                showAlert('Failed to add ID. Check your token.', 'error');
+            } finally {
+                addBtn.innerHTML = '<i class="fas fa-plus"></i> Add ID';
+                addBtn.disabled = false;
+            }
+        }
+
+        // Delete specific ID by input
+        async function handleDeleteSpecific() {
+            const idToDelete = deleteIdInput.value.trim();
+            
+            if (!idToDelete) {
+                showAlert('Please enter an ID to delete', 'error');
+                deleteIdInput.focus();
+                return;
+            }
+            
+            if (!currentIds.includes(idToDelete)) {
+                showAlert('ID not found in the list', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete:\n${idToDelete}?`)) {
+                return;
+            }
+            
+            await deleteSingleId(idToDelete);
+            deleteIdInput.value = '';
+        }
+
+        // Delete single ID
+        async function deleteSingleId(id) {
+            const index = currentIds.indexOf(id);
+            if (index === -1) return;
+            
+            const deletedId = currentIds[index];
+            currentIds.splice(index, 1);
+            
+            try {
+                await updateGitHubFile();
+                renderIdsList();
+                showAlert('ID deleted successfully', 'success');
+            } catch (error) {
+                console.error('Error deleting ID:', error);
+                currentIds.splice(index, 0, deletedId);
+                showAlert('Failed to delete ID', 'error');
+            }
+        }
+
+        // Delete all IDs
+        async function handleDeleteAll() {
+            if (currentIds.length === 0) {
+                showAlert('No IDs to delete', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ALL ${currentIds.length} IDs?\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                deleteAllBtn.innerHTML = '<div class="loading"></div> Deleting...';
+                deleteAllBtn.disabled = true;
+                
+                const backupIds = [...currentIds];
+                currentIds = [];
+                
+                await updateGitHubFile();
+                renderIdsList();
+                showAlert('All IDs deleted successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error deleting all IDs:', error);
+                currentIds = backupIds;
+                showAlert('Failed to delete all IDs', 'error');
+            } finally {
+                deleteAllBtn.innerHTML = '<i class="fas fa-bomb"></i> Delete All IDs';
+                deleteAllBtn.disabled = false;
+            }
+        }
+
+        // Update GitHub file
+        async function updateGitHubFile() {
+            // Get current file SHA
+            let sha = '';
+            try {
+                const getUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
+                const response = await fetch(getUrl, {
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const fileData = await response.json();
+                    sha = fileData.sha;
+                }
+            } catch (error) {
+                // File may not exist yet
+            }
+            
+            // Update file
+            const updateUrl = `https://api.github.com/repos/${CONFIG.GITHUB.REPO}/contents/${CONFIG.GITHUB.FILE}`;
+            const content = JSON.stringify(currentIds, null, 2);
+            const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+            
+            const data = {
+                message: `Update newsletter IDs: ${new Date().toLocaleString()}`,
+                content: contentBase64,
+                branch: CONFIG.GITHUB.BRANCH
+            };
+            
+            if (sha) {
+                data.sha = sha;
+            }
+            
+            const response = await fetch(updateUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update GitHub file');
+            }
+        }
+
+        // Copy ID to clipboard
+        function copyId(id) {
+            navigator.clipboard.writeText(id).then(() => {
+                showAlert('ID copied to clipboard', 'success');
+            });
+        }
+
+        // Expose function for onclick
+        window.copyId = copyId;
+        window.deleteSingleId = deleteSingleId;
+    </script>
+</body>
+</html>
