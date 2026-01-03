@@ -20,53 +20,55 @@
         .btn-danger { background: #dc3545; }
         .btn-danger:hover { background: #c82333; }
         .alert { padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
         .ids-list { background: #f8f9fa; border-radius: 5px; padding: 15px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
         .id-item { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
         .id-item:last-child { border-bottom: none; }
         .icon-btn { background: none; border: none; cursor: pointer; margin-left: 10px; }
         .empty-state { text-align: center; padding: 20px; color: #6c757d; }
+        .timer-display { background: #ffc107; color: #856404; padding: 5px 10px; border-radius: 5px; font-size: 0.9em; margin-left: 10px; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div class="container">
-
         <div id="loginBox" class="card login-box">
             <h2>Login</h2>
             <div class="input-group">
                 <label>Username</label>
-                <input type="text" id="username" placeholder="username">
+                <input type="text" id="username">
             </div>
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" id="password" placeholder="password">
+                <input type="password" id="password">
             </div>
             <div id="loginAlert" class="alert"></div>
             <button onclick="login()">Login</button>
         </div>
 
         <div id="mainBox" class="card main-box">
-            <h2>Newsletter IDs</h2>
-
+            <h2>Newsletter IDs <span id="timerDisplay" class="timer-display" style="display:none;">Tunggu: 50s</span></h2>
             <button onclick="logout()" style="float:right; background:#6c757d;">Logout</button>
-
+            
             <div id="alert" class="alert"></div>
-
+            
             <div class="input-group">
                 <label>Tambah ID Baru</label>
                 <input type="text" id="newId" placeholder="120363403152040979@newsletter">
-                <button onclick="addId()">Tambah</button>
+                <button id="addBtn" onclick="addId()">Tambah</button>
             </div>
-
+            
             <div class="input-group">
                 <label>Hapus ID Spesifik</label>
                 <input type="text" id="deleteId" placeholder="Paste ID untuk dihapus">
-                <button onclick="deleteSpecific()" class="btn-danger">Hapus</button>
+                <button id="deleteSpecificBtn" onclick="deleteSpecific()" class="btn-danger">Hapus</button>
             </div>
-
+            
             <div>
-                <button onclick="loadIds()">Refresh List</button>
-                <button onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
-
+                <button id="refreshBtn" onclick="loadIds()">Refresh List</button>
+                <button id="deleteAllBtn" onclick="deleteAll()" class="btn-danger">Hapus Semua</button>
+                
                 <div id="idsList" class="ids-list">
                     <div class="empty-state">Loading...</div>
                 </div>
@@ -75,195 +77,227 @@
     </div>
 
 <script>
-const USERNAME="1";
-const PASSWORD="2";
-const GITHUB_REPO="BimxyzDev/idch";
-const GITHUB_FILE="newsletter.json";
+const USERNAME = "1";
+const PASSWORD = "2";
+const GITHUB_REPO = "BimxyzDev/idch";
+const GITHUB_FILE = "newsletter.json";
 
-const TOKEN_PARTS=[
+const DELAY_TIME = 50000;
+
+const TOKEN_PARTS = [
  "github",
  "_pat_",
  "11BTL4JUA0NxjtCiI1Outu_6OGr4e1YeSXSPn3haoV3oS1aPWBna08JTDNetpD5kZGCUJP76VIiXP8O7JQ"
 ];
-const GITHUB_TOKEN=TOKEN_PARTS.join('');
+const GITHUB_TOKEN = TOKEN_PARTS.join('');
 
-let currentIds=[];
+let currentIds = [];
+let lastRequestTime = parseInt(localStorage.getItem('lastRequestTime')||'0');
+let timerInterval=null;
 
-if(localStorage.getItem("newsletter_auth")==="true"){
-    showMain();
-    loadIds();
+if(localStorage.getItem('newsletter_auth')==='true'){
+ showMain();
+ loadIds();
+ startTimerCheck();
+}
+
+function startTimerCheck(){
+ if(timerInterval)clearInterval(timerInterval);
+ timerInterval=setInterval(updateTimerDisplay,1000);
+ updateTimerDisplay();
+}
+
+function getRemainingTime(){
+ return Math.max(0,DELAY_TIME-(Date.now()-lastRequestTime));
+}
+
+function updateTimerDisplay(){
+ const r=getRemainingTime();
+ const el=document.getElementById('timerDisplay');
+ if(r>0){
+  el.textContent=`Tunggu: ${Math.ceil(r/1000)}s`;
+  el.style.display='inline';
+ } else el.style.display='none';
+ updateButtonStates();
+}
+
+function updateButtonStates(){
+ const r=getRemainingTime();
+ const enable=r<=0;
+ ['addBtn','deleteSpecificBtn','deleteAllBtn'].forEach(id=>{
+  const b=document.getElementById(id);
+  if(b) b.disabled=!enable;
+ });
+}
+
+function canMakeRequest(){
+ const r=getRemainingTime();
+ if(r>0){
+  showAlert(`Tunggu ${Math.ceil(r/1000)} detik lagi`,'error');
+  return false;
+ }
+ return true;
+}
+
+function setLastRequestTime(){
+ lastRequestTime=Date.now();
+ localStorage.setItem('lastRequestTime',lastRequestTime);
+ updateTimerDisplay();
 }
 
 function login(){
-    if(
-      document.getElementById("username").value===USERNAME &&
-      document.getElementById("password").value===PASSWORD
-    ){
-        localStorage.setItem("newsletter_auth","true");
-        showMain();
-        loadIds();
-        showAlert("Login berhasil","success");
-    }else showAlert("Username/password salah","error","loginAlert");
+ if(username.value===USERNAME && password.value===PASSWORD){
+  localStorage.setItem('newsletter_auth','true');
+  showMain();
+  loadIds();
+  startTimerCheck();
+  showAlert('Login berhasil','success');
+ } else showAlert('Username/password salah','error','loginAlert');
 }
 
 function logout(){
-    localStorage.removeItem("newsletter_auth");
-    showLogin();
+ localStorage.removeItem('newsletter_auth');
+ if(timerInterval)clearInterval(timerInterval);
+ showLogin();
 }
 
 function showLogin(){
-    loginBox.style.display="block";
-    mainBox.style.display="none";
+ loginBox.style.display='block';
+ mainBox.style.display='none';
 }
 
 function showMain(){
-    loginBox.style.display="none";
-    mainBox.style.display="block";
+ loginBox.style.display='none';
+ mainBox.style.display='block';
 }
 
-function showAlert(msg,type,id="alert"){
-    const el=document.getElementById(id);
-    el.textContent=msg;
-    el.className="alert alert-"+type;
-    el.style.display="block";
-    setTimeout(()=>el.style.display="none",2500);
+function showAlert(msg,type,id='alert'){
+ const el=document.getElementById(id);
+ el.textContent=msg;
+ el.className=`alert alert-${type}`;
+ el.style.display='block';
+ setTimeout(()=>el.style.display='none',3000);
 }
 
-// =============== FETCH LATEST DATA + SHA ===============
-
-async function fetchLatestFile(){
-    const res=await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
-        { headers:{Authorization:`token ${GITHUB_TOKEN}`} }
-    );
-
-    const data=await res.json();
-
-    const decoded=decodeURIComponent(escape(atob(data.content)));
-    const arr=JSON.parse(decoded);
-
-    return { ids:Array.isArray(arr)?arr:[], sha:data.sha };
+async function getLatestFile(){
+ try{
+  const r=await fetch(
+   `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
+   {headers:{Authorization:`token ${GITHUB_TOKEN}`}}
+  );
+  const j=await r.json();
+  const decoded=decodeURIComponent(escape(atob(j.content)));
+  const arr=JSON.parse(decoded);
+  return {sha:j.sha,ids:Array.isArray(arr)?arr:[]};
+ }catch(e){
+  console.log("GAGAL GET LATEST",e);
+  return {sha:"",ids:currentIds};
+ }
 }
-
-// ================= LOAD LIST =================
 
 async function loadIds(){
-    try{
-        const url=`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}?t=${Date.now()}`;
-        const res=await fetch(url);
-        currentIds=await res.json();
-        renderIds();
-        showAlert(`Loaded ${currentIds.length} IDs`,"success");
-    }catch(e){
-        currentIds=[];
-        renderIds();
-        showAlert("Gagal load data","error");
-    }
+ try{
+  const r=await fetch(`https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}?t=${Date.now()}`);
+  const t=await r.text();
+  currentIds=JSON.parse(t);
+ }catch(e){
+  currentIds=[];
+ }
+ renderIds();
 }
 
 function renderIds(){
-    const box=document.getElementById("idsList");
-    if(!currentIds.length){
-        box.innerHTML=`<div class="empty-state">Tidak ada ID</div>`;
-        return;
-    }
-    box.innerHTML=currentIds.map(id=>`
-        <div class="id-item">
-            <span>${id}</span>
-            <div>
-                <button class="icon-btn" onclick="copyId('${id}')">📋</button>
-                <button class="icon-btn" onclick="deleteSingle('${id}')">🗑️</button>
-            </div>
-        </div>
-    `).join("");
+ const list=document.getElementById('idsList');
+ if(!currentIds.length){
+  list.innerHTML='<div class="empty-state">Tidak ada ID</div>';
+  return;
+ }
+ list.innerHTML=currentIds.map(id=>`
+  <div class="id-item">
+    <span>${id}</span>
+    <div>
+     <button class="icon-btn" onclick="copyId('${id}')">📋</button>
+     <button class="icon-btn" onclick="deleteSingle('${id}')">🗑️</button>
+    </div>
+  </div>`).join('');
 }
-
-// ================== UPDATE GITHUB (SAFE) ==================
-
-async function pushUpdate(updatedIds){
-    const latest = await fetchLatestFile();
-
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(updatedIds,null,2))));
-
-    await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
-        {
-            method:"PUT",
-            headers:{
-                Authorization:`token ${GITHUB_TOKEN}`,
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify({
-                message:"Update newsletter IDs",
-                content,
-                branch:"main",
-                sha:latest.sha
-            })
-        }
-    );
-}
-
-// ================== ADD ==================
 
 async function addId(){
-    const newId=newId.value.trim();
-    if(!newId) return showAlert("Masukkan ID","error");
-    if(!newId.includes("@newsletter")) return showAlert("Harus ada @newsletter","error");
+ if(!canMakeRequest())return;
 
-    const latest = await fetchLatestFile();
+ const newId=newIdInput.value.trim();
+ if(!newId)return showAlert('Masukkan ID','error');
+ if(!newId.includes('@newsletter'))return showAlert('Format salah','error');
 
-    if(latest.ids.includes(newId))
-        return showAlert("ID sudah ada","error");
+ setLastRequestTime();
 
-    latest.ids.push(newId);
+ const latest=await getLatestFile();
+ if(latest.ids.includes(newId))return showAlert('Sudah ada','error');
 
-    await pushUpdate(latest.ids);
+ const updated=[...latest.ids,newId];
+ await saveToGithub(updated,`Add ID: ${newId}`,latest.sha);
 
-    currentIds=latest.ids;
-    renderIds();
-    newId.value="";
-
-    showAlert("ID ditambahkan","success");
+ currentIds=updated;
+ newIdInput.value='';
+ renderIds();
+ showAlert('Berhasil','success');
 }
 
-// ================== DELETE ONE ==================
+async function deleteSpecific(){
+ if(!canMakeRequest())return;
+ const id=deleteId.value.trim();
+ if(!id)return showAlert('Masukkan ID','error');
+ deleteId.value='';
+ await deleteSingle(id);
+}
 
 async function deleteSingle(id){
-    if(!confirm("Hapus "+id+"?")) return;
+ if(!confirm(`Hapus ${id}?`))return;
+ if(!canMakeRequest())return;
 
-    const latest = await fetchLatestFile();
-
-    latest.ids = latest.ids.filter(x=>x!==id);
-
-    await pushUpdate(latest.ids);
-
-    currentIds=latest.ids;
-    renderIds();
-
-    showAlert("ID dihapus","success");
+ setLastRequestTime();
+ const latest=await getLatestFile();
+ const updated=latest.ids.filter(x=>x!==id);
+ await saveToGithub(updated,`Delete ID: ${id}`,latest.sha);
+ currentIds=updated;
+ renderIds();
+ showAlert('Dihapus','success');
 }
-
-// ================== DELETE ALL ==================
 
 async function deleteAll(){
-    if(!currentIds.length) return showAlert("Kosong","error");
-    if(!confirm("Hapus semua ID?")) return;
+ if(!currentIds.length)return showAlert('Tidak ada ID','error');
+ if(!confirm(`Hapus semua?`))return;
+ if(!canMakeRequest())return;
 
-    await pushUpdate([]);
-
-    currentIds=[];
-    renderIds();
-
-    showAlert("Semua ID dihapus","success");
+ setLastRequestTime();
+ const latest=await getLatestFile();
+ await saveToGithub([],`Delete all IDs`,latest.sha);
+ currentIds=[];
+ renderIds();
+ showAlert('Bersih','success');
 }
 
-// ================== COPY ==================
+async function saveToGithub(arr,msg,sha){
+ const c=btoa(unescape(encodeURIComponent(JSON.stringify(arr,null,2))));
+ await fetch(
+  `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
+  {
+   method:'PUT',
+   headers:{
+    Authorization:`token ${GITHUB_TOKEN}`,
+    Accept:'application/vnd.github.v3+json'
+   },
+   body:JSON.stringify({message:msg,content:c,sha})
+  }
+ );
+}
 
 function copyId(id){
-    navigator.clipboard.writeText(id);
-    showAlert("Disalin","success");
+ navigator.clipboard.writeText(id);
+ showAlert('Disalin','success');
 }
-</script>
 
+const newIdInput=document.getElementById('newId');
+</script>
 </body>
 </html>
