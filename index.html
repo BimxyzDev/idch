@@ -40,7 +40,7 @@
             <h2>Login</h2>
             <div class="input-group">
                 <label>Username</label>
-                <input type="text" id="username" placeholder="usernane">
+                <input type="text" id="username" placeholder="username">
             </div>
             <div class="input-group">
                 <label>Password</label>
@@ -97,7 +97,6 @@
         const GITHUB_TOKEN = TOKEN_PARTS.join('');
         
         let currentIds = [];
-        let lastRequestTime = parseInt(localStorage.getItem('lastRequestTime') || '0');
         let timerInterval = null;
 
         // Check login
@@ -107,21 +106,27 @@
             startTimerCheck();
         }
 
-        // Timer system
+        // Timer system - HANYA untuk write operations
         function startTimerCheck() {
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(updateTimerDisplay, 1000);
             updateButtonStates();
         }
 
-        function getRemainingTime() {
+        function getLastWriteTime() {
+            const stored = localStorage.getItem('lastWriteTime');
+            return stored ? parseInt(stored) : 0;
+        }
+
+        function getRemainingWriteTime() {
+            const lastWriteTime = getLastWriteTime();
             const now = Date.now();
-            const timeSinceLastRequest = now - lastRequestTime;
-            return Math.max(0, DELAY_TIME - timeSinceLastRequest);
+            const timeSinceLastWrite = now - lastWriteTime;
+            return Math.max(0, DELAY_TIME - timeSinceLastWrite);
         }
 
         function updateTimerDisplay() {
-            const remaining = getRemainingTime();
+            const remaining = getRemainingWriteTime();
             const timerDisplay = document.getElementById('timerDisplay');
             
             if (remaining > 0) {
@@ -136,23 +141,26 @@
         }
 
         function updateButtonStates() {
-            const remaining = getRemainingTime();
-            const canRequest = remaining <= 0;
+            const remaining = getRemainingWriteTime();
+            const canWrite = remaining <= 0;
             
-            const buttons = ['addBtn', 'deleteSpecificBtn', 'deleteAllBtn', 'refreshBtn'];
-            buttons.forEach(btnId => {
+            // Write buttons (add, delete) - kena delay
+            const writeButtons = ['addBtn', 'deleteSpecificBtn', 'deleteAllBtn'];
+            writeButtons.forEach(btnId => {
                 const btn = document.getElementById(btnId);
-                if (btn) {
-                    btn.disabled = !canRequest;
-                }
+                if (btn) btn.disabled = !canWrite;
             });
             
-            // Update placeholder text
-            const inputs = ['newId', 'deleteId'];
-            inputs.forEach(inputId => {
+            // Read button (refresh) - TIDAK kena delay
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) refreshBtn.disabled = false;
+            
+            // Update input fields hanya untuk write operations
+            const writeInputs = ['newId', 'deleteId'];
+            writeInputs.forEach(inputId => {
                 const input = document.getElementById(inputId);
                 if (input) {
-                    if (!canRequest) {
+                    if (!canWrite) {
                         const seconds = Math.ceil(remaining / 1000);
                         input.placeholder = `Tunggu ${seconds} detik...`;
                         input.disabled = true;
@@ -164,19 +172,34 @@
             });
         }
 
-        function canMakeRequest() {
-            const remaining = getRemainingTime();
+        function canMakeWriteRequest() {
+            const remaining = getRemainingWriteTime();
             if (remaining > 0) {
                 const seconds = Math.ceil(remaining / 1000);
-                showAlert(`Tunggu ${seconds} detik lagi`, 'error');
+                showAlert(`Tunggu ${seconds} detik lagi untuk operasi write`, 'error');
                 return false;
             }
             return true;
         }
 
-        function setLastRequestTime() {
-            lastRequestTime = Date.now();
-            localStorage.setItem('lastRequestTime', lastRequestTime.toString());
+        function setLastWriteTime() {
+            const now = Date.now();
+            localStorage.setItem('lastWriteTime', now.toString());
+            
+            // Simpan juga timestamp lengkap untuk logging
+            const date = new Date(now);
+            const timestamp = {
+                date: date.toISOString(),
+                year: date.getFullYear(),
+                month: date.getMonth() + 1,
+                day: date.getDate(),
+                hours: date.getHours(),
+                minutes: date.getMinutes(),
+                seconds: date.getSeconds(),
+                timestamp: now
+            };
+            localStorage.setItem('lastWriteTimestamp', JSON.stringify(timestamp));
+            
             updateTimerDisplay();
         }
 
@@ -219,11 +242,9 @@
             setTimeout(() => el.style.display = 'none', 3000);
         }
 
+        // REFRESH - TIDAK KENA DELAY
         async function loadIds() {
-            if (!canMakeRequest()) return;
-            
             try {
-                setLastRequestTime();
                 const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}?t=${Date.now()}`;
                 const res = await fetch(url);
 
@@ -271,8 +292,9 @@
             list.innerHTML = html;
         }
 
+        // ADD ID - KENA DELAY
         async function addId() {
-            if (!canMakeRequest()) return;
+            if (!canMakeWriteRequest()) return;
             
             const newId = document.getElementById('newId').value.trim();
             if (!newId) return showAlert('Masukkan ID', 'error');
@@ -280,7 +302,8 @@
             if (currentIds.includes(newId)) return showAlert('ID sudah ada', 'error');
             
             try {
-                setLastRequestTime();
+                // Set timer untuk write operation
+                setLastWriteTime();
                 
                 let sha = '';
                 try {
@@ -326,7 +349,7 @@
         }
 
         async function deleteSpecific() {
-            if (!canMakeRequest()) return;
+            if (!canMakeWriteRequest()) return;
             
             const id = document.getElementById('deleteId').value.trim();
             if (!id) return showAlert('Masukkan ID', 'error');
@@ -334,12 +357,14 @@
             document.getElementById('deleteId').value = '';
         }
 
+        // DELETE SINGLE - KENA DELAY
         async function deleteSingle(id) {
             if (!confirm(`Hapus ${id}?`)) return;
-            if (!canMakeRequest()) return;
+            if (!canMakeWriteRequest()) return;
             
             try {
-                setLastRequestTime();
+                // Set timer untuk write operation
+                setLastWriteTime();
                 
                 let sha = '';
                 try {
@@ -383,13 +408,15 @@
             }
         }
 
+        // DELETE ALL - KENA DELAY
         async function deleteAll() {
             if (!currentIds.length) return showAlert('Tidak ada ID', 'error');
             if (!confirm(`Hapus ${currentIds.length} ID?`)) return;
-            if (!canMakeRequest()) return;
+            if (!canMakeWriteRequest()) return;
             
             try {
-                setLastRequestTime();
+                // Set timer untuk write operation
+                setLastWriteTime();
                 
                 let sha = '';
                 try {
